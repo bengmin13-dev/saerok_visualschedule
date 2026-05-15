@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>시각 스케줄</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+:root {
+  --bg: #EEF4FF;
+  --card-bg: #fff;
+  --accent: #5B8BF5;
+  --accent2: #FF8FAB;
+  --accent3: #52C788;
+  --yellow: #FFD166;
+  --text: #2D3250;
+  --subtext: #8892B0;
+  --shadow: 0 4px 16px rgba(91,139,245,0.13);
+  --radius: 20px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--bg);
+  min-height: 100vh;
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ── 헤더 ── */
+.header {
+  background: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 12px rgba(91,139,245,0.10);
+  position: sticky; top: 0; z-index: 100;
+}
+.header-title {
+  font-family: 'Gaegu', cursive;
+  font-size: 22px;
+  color: var(--accent);
+  letter-spacing: -0.5px;
+}
+.mode-badge {
+  font-size: 12px; font-weight: 700;
+  padding: 4px 12px; border-radius: 20px;
+  letter-spacing: .3px;
+}
+.mode-badge.edit { background: #FFF3CD; color: #856404; }
+.mode-badge.run  { background: #D1F7E5; color: #166534; }
+
+/* ── 툴바 (편집 모드) ── */
+.toolbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px;
+  flex-wrap: wrap;
+}
+.toolbar-label { font-size: 13px; color: var(--subtext); font-weight: 500; }
+.count-ctrl { display: flex; align-items: center; gap: 6px; }
+.count-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: #fff; color: var(--accent);
+  font-size: 18px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.count-btn:hover { background: var(--accent); color: #fff; }
+.count-val {
+  font-size: 18px; font-weight: 700; color: var(--text);
+  min-width: 24px; text-align: center;
+}
+.run-btn {
+  margin-left: auto;
+  background: var(--accent3);
+  color: #fff; border: none;
+  border-radius: 24px; padding: 9px 22px;
+  font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  box-shadow: 0 3px 10px rgba(82,199,136,.35);
+  transition: transform .1s, box-shadow .1s;
+}
+.run-btn:active { transform: scale(.96); }
+.edit-btn {
+  margin-left: auto;
+  background: #fff;
+  color: var(--accent); border: 2px solid var(--accent);
+  border-radius: 24px; padding: 8px 20px;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  transition: background .15s;
+}
+.edit-btn:hover { background: var(--accent); color: #fff; }
+
+/* ── 보상 아이콘 영역 ── */
+.reward-section {
+  padding: 0 20px 10px;
+  display: flex; align-items: center; gap: 10px;
+}
+.reward-label { font-size: 13px; color: var(--subtext); font-weight: 500; }
+.reward-preview {
+  width: 56px; height: 56px; border-radius: 14px;
+  border: 2.5px dashed #B0BDFF;
+  background: #F7F9FF;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; overflow: hidden; position: relative;
+  transition: border-color .2s;
+}
+.reward-preview:hover { border-color: var(--accent); }
+.reward-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 11px; }
+.reward-preview .plus { font-size: 22px; color: #B0BDFF; }
+.reward-text-input {
+  flex: 1; border: 2px solid #D8E0FF; border-radius: 12px;
+  padding: 8px 12px; font-size: 14px;
+  font-family: 'Noto Sans KR', sans-serif;
+  outline: none; background: #fff; color: var(--text);
+}
+.reward-text-input:focus { border-color: var(--accent); }
+
+/* ── 스케줄 그리드 ── */
+.schedule-wrap {
+  padding: 10px 20px 30px;
+  overflow-x: auto;
+}
+.schedule-grid {
+  display: flex; gap: 12px;
+  min-width: max-content;
+  align-items: flex-start;
+}
+
+/* ── 카드 공통 ── */
+.card-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.card-num {
+  font-size: 12px; font-weight: 700; color: var(--subtext);
+  letter-spacing: .5px;
+}
+
+.card {
+  width: 130px; height: 130px;
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+  border: 3px solid transparent;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s, box-shadow .2s, transform .15s;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+
+/* 편집 모드 카드 */
+.card.edit-mode {
+  cursor: pointer;
+  border: 3px dashed #C5D0FF;
+}
+.card.edit-mode:hover { border-color: var(--accent); }
+.card.edit-mode.filled { border-style: solid; border-color: #D8E0FF; }
+
+/* 실행 모드 카드 */
+.card.run-mode { cursor: pointer; border-color: #E0E8FF; }
+.card.run-mode:active { transform: scale(.95); }
+.card.run-mode.done {
+  border-color: var(--accent3);
+  box-shadow: 0 4px 20px rgba(82,199,136,.30);
+}
+
+/* 카드 내부 */
+.card-img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  position: absolute; top: 0; left: 0;
+  border-radius: calc(var(--radius) - 3px);
+}
+.card-text {
+  font-size: 17px; font-weight: 700;
+  text-align: center; padding: 10px;
+  word-break: keep-all; line-height: 1.4;
+  color: var(--text); z-index: 1;
+}
+.card-text-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,.55));
+  color: #fff; font-size: 13px; font-weight: 700;
+  padding: 18px 8px 8px; text-align: center;
+  z-index: 2;
+  word-break: keep-all;
+}
+
+/* 편집 모드 - 빈 카드 */
+.card-empty-hint {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  color: #B0BDFF;
+}
+.card-empty-hint .icon { font-size: 28px; }
+.card-empty-hint .hint-text { font-size: 11px; font-weight: 500; }
+
+/* 완수 오버레이 */
+.done-overlay {
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,.15);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0; transition: opacity .2s;
+}
+.done-overlay.show { opacity: 1; }
+.done-circle {
+  width: 80px; height: 80px; border-radius: 50%;
+  border: 6px solid var(--accent3);
+  background: rgba(255,255,255,.85);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  animation: popIn .3s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* 화살표 + 보상 박스 */
+.arrow-reward {
+  display: flex; flex-direction: row; align-items: center; gap: 6px;
+  padding-top: 26px;
+}
+.arrow { font-size: 28px; color: var(--accent); }
+.reward-box {
+  width: 130px; height: 130px; border-radius: 18px;
+  background: #fff; box-shadow: var(--shadow);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  overflow: hidden; gap: 3px;
+  border: 2.5px solid #D8E0FF;
+}
+.reward-box img { width: 100%; height: 70%; object-fit: cover; }
+.reward-box-text {
+  font-size: 13px; font-weight: 700;
+  color: var(--accent); text-align: center;
+  padding: 0 6px; word-break: keep-all;
+}
+
+/* ── 진행 바 (실행 모드) ── */
+.progress-wrap {
+  padding: 0 20px 12px;
+}
+.progress-bar-bg {
+  height: 12px; border-radius: 10px;
+  background: #DDE5FF;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%; border-radius: 10px;
+  background: linear-gradient(90deg, var(--accent), var(--accent3));
+  transition: width .4s ease;
+}
+.progress-label {
+  font-size: 12px; color: var(--subtext);
+  font-weight: 600; margin-top: 5px;
+  text-align: right;
+}
+
+/* ── 편집 팝업 ── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(45,50,80,.45);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal {
+  background: #fff;
+  border-radius: 24px;
+  padding: 24px;
+  width: 100%; max-width: 340px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  animation: slideUp .25s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.modal-title {
+  font-size: 16px; font-weight: 700; color: var(--text);
+  margin-bottom: 16px; text-align: center;
+}
+.modal-section { margin-bottom: 14px; }
+.modal-section label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--subtext); margin-bottom: 6px; letter-spacing: .3px;
+}
+.modal-section input[type="text"] {
+  width: 100%; border: 2px solid #D8E0FF;
+  border-radius: 12px; padding: 10px 14px;
+  font-size: 15px; font-family: 'Noto Sans KR', sans-serif;
+  outline: none; color: var(--text);
+}
+.modal-section input[type="text"]:focus { border-color: var(--accent); }
+
+.photo-upload-area {
+  width: 100%; height: 120px;
+  border: 2.5px dashed #C5D0FF; border-radius: 16px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer; gap: 6px;
+  background: #F7F9FF;
+  transition: border-color .2s;
+  overflow: hidden; position: relative;
+}
+.photo-upload-area:hover { border-color: var(--accent); }
+.photo-upload-area img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover;
+  border-radius: 13px;
+}
+.photo-upload-area .upload-hint { color: #B0BDFF; font-size: 12px; font-weight: 600; z-index: 1; }
+.photo-upload-area .upload-icon { font-size: 28px; z-index: 1; }
+
+.modal-btns { display: flex; gap: 10px; margin-top: 18px; }
+.modal-btn {
+  flex: 1; padding: 12px;
+  border-radius: 14px; border: none;
+  font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  transition: opacity .15s;
+}
+.modal-btn:active { opacity: .8; }
+.modal-btn.cancel { background: #F0F2FF; color: var(--subtext); }
+.modal-btn.save   { background: var(--accent); color: #fff; }
+.modal-btn.delete { background: #FFE5EA; color: #C9324A; }
+
+/* ── 칭찬 팝업 ── */
+.praise-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(45,50,80,.55);
+  backdrop-filter: blur(6px);
+  z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.praise-box {
+  background: #fff;
+  border-radius: 30px;
+  padding: 36px 28px;
+  text-align: center;
+  box-shadow: 0 30px 80px rgba(0,0,0,.2);
+  animation: praiseIn .4s cubic-bezier(.34,1.56,.64,1);
+  max-width: 300px; width: 100%;
+}
+@keyframes praiseIn {
+  from { transform: scale(.5) rotate(-6deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.praise-emoji { font-size: 64px; margin-bottom: 10px; animation: bounce 1s infinite; }
+@keyframes bounce {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.praise-title {
+  font-family: 'Gaegu', cursive;
+  font-size: 30px; color: var(--accent);
+  margin-bottom: 8px;
+}
+.praise-sub { font-size: 15px; color: var(--subtext); margin-bottom: 20px; line-height: 1.5; }
+.praise-reward {
+  width: 90px; height: 90px; border-radius: 20px;
+  margin: 0 auto 16px;
+  background: #F7F9FF;
+  border: 3px solid #D8E0FF;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; font-size: 15px; font-weight: 700; color: var(--accent);
+  word-break: keep-all; text-align: center; padding: 8px;
+}
+.praise-reward img { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
+.praise-close {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 16px;
+  padding: 13px 32px; font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  width: 100%;
+}
+
+/* 별 애니메이션 */
+.stars-container {
+  position: fixed; inset: 0; pointer-events: none; z-index: 299; overflow: hidden;
+}
+.star {
+  position: absolute;
+  font-size: 20px;
+  animation: starFall linear forwards;
+}
+@keyframes starFall {
+  from { transform: translateY(-40px) rotate(0deg); opacity: 1; }
+  to   { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* 숨김 input */
+input[type="file"] { display: none; }
+
+/* 반응형 */
+@media (max-width: 480px) {
+  .card { width: 110px; height: 110px; }
+  .reward-box { width: 68px; height: 68px; }
+  .schedule-grid { gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div class="header">
+  <div class="header-title">📋 오늘의 스케줄</div>
+  <div class="mode-badge edit" id="modeBadge">✏️ 편집 중</div>
+</div>
+
+<!-- 편집 모드 툴바 -->
+<div class="toolbar" id="editToolbar">
+  <span class="toolbar-label">칸 수</span>
+  <div class="count-ctrl">
+    <button class="count-btn" onclick="changeCount(-1)">−</button>
+    <span class="count-val" id="countVal">5</span>
+    <button class="count-btn" onclick="changeCount(1)">+</button>
+  </div>
+  <button class="run-btn" onclick="startRun()">▶ 시작하기</button>
+</div>
+
+<!-- 실행 모드 툴바 -->
+<div class="toolbar" id="runToolbar" style="display:none">
+  <span class="toolbar-label" id="runStatusLabel">하나씩 터치해봐요! 👆</span>
+  <button class="edit-btn" onclick="goEdit()">✏️ 편집</button>
+</div>
+
+<!-- 진행 바 (실행 모드) -->
+<div class="progress-wrap" id="progressWrap" style="display:none">
+  <div class="progress-bar-bg">
+    <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">0 / 0</div>
+</div>
+
+<!-- 보상 설정 (편집 모드) -->
+<div class="reward-section" id="rewardSection">
+  <span class="reward-label">🎁 보상</span>
+  <div class="reward-preview" id="rewardPreview" onclick="triggerRewardPhoto()">
+    <span class="plus" id="rewardPlus">＋</span>
+    <img id="rewardImg" style="display:none">
+  </div>
+  <input type="text" class="reward-text-input" id="rewardTextInput" placeholder="보상 이름 입력 (예: 스티커)">
+</div>
+
+<!-- 스케줄 그리드 -->
+<div class="schedule-wrap">
+  <div class="schedule-grid" id="scheduleGrid"></div>
+</div>
+
+<!-- 편집 팝업 -->
+<div class="modal-backdrop" id="editModal" style="display:none" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title">📝 칸 편집</div>
+    <div class="modal-section">
+      <label>텍스트</label>
+      <input type="text" id="cardTextInput" placeholder="예: 양치질, 식사, 책읽기…" maxlength="12">
+    </div>
+    <div class="modal-section">
+      <label>사진</label>
+      <div class="photo-upload-area" id="photoUploadArea" onclick="triggerCardPhoto()">
+        <span class="upload-icon">📷</span>
+        <span class="upload-hint">터치해서 사진 추가</span>
+        <img id="photoPreview" style="display:none">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn delete" onclick="deleteCard()">삭제</button>
+      <button class="modal-btn cancel" onclick="closeEditModal()">취소</button>
+      <button class="modal-btn save" onclick="saveCard()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 칭찬 팝업 -->
+<div class="praise-backdrop" id="praiseModal" style="display:none">
+  <div class="praise-box">
+    <div class="praise-emoji">🎉</div>
+    <div class="praise-title">다 했어요!</div>
+    <div class="praise-sub" id="praiseSub">오늘 스케줄을 모두 완성했어요!<br>정말 잘했어요 ⭐</div>
+    <div class="praise-reward" id="praiseReward"></div>
+    <button class="praise-close" onclick="closePraise()">다시 하기 🔄</button>
+  </div>
+</div>
+
+<!-- 별 컨테이너 -->
+<div class="stars-container" id="starsContainer"></div>
+
+<!-- 숨김 파일 input -->
+<input type="file" id="cardFileInput" accept="image/*" capture="environment">
+<input type="file" id="rewardFileInput" accept="image/*" capture="environment">
+
+<script>
+// ── 상태 ──
+let count = 5;
+let isRunMode = false;
+let cards = []; // { text, imgDataUrl, done }
+let editingIndex = -1;
+let tempImgDataUrl = null;
+let rewardImgDataUrl = null;
+
+// ── 초기화 ──
+function init() {
+  // cards 배열 count 크기에 맞게 조정
+  while (cards.length < count) cards.push({ text: '', imgDataUrl: null, done: false });
+  while (cards.length > count) cards.pop();
+  render();
+}
+
+// ── 칸 수 변경 ──
+function changeCount(delta) {
+  const next = count + delta;
+  if (next < 3 || next > 8) return;
+  count = next;
+  document.getElementById('countVal').textContent = count;
+  init();
+}
+
+// ── 렌더 ──
+function render() {
+  const grid = document.getElementById('scheduleGrid');
+  grid.innerHTML = '';
+
+  cards.slice(0, count).forEach((card, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'card-wrap';
+
+    const num = document.createElement('div');
+    num.className = 'card-num';
+    num.textContent = i + 1;
+    wrap.appendChild(num);
+
+    const el = document.createElement('div');
+    el.className = 'card ' + (isRunMode ? 'run-mode' : 'edit-mode');
+    if (!isRunMode && (card.text || card.imgDataUrl)) el.classList.add('filled');
+    if (isRunMode && card.done) el.classList.add('done');
+
+    // 내용 채우기
+    if (card.imgDataUrl) {
+      const img = document.createElement('img');
+      img.className = 'card-img';
+      img.src = card.imgDataUrl;
+      el.appendChild(img);
+      if (card.text) {
+        const ov = document.createElement('div');
+        ov.className = 'card-text-overlay';
+        ov.textContent = card.text;
+        el.appendChild(ov);
+      }
+    } else if (card.text) {
+      const t = document.createElement('div');
+      t.className = 'card-text';
+      t.textContent = card.text;
+      el.appendChild(t);
+    } else if (!isRunMode) {
+      const hint = document.createElement('div');
+      hint.className = 'card-empty-hint';
+      hint.innerHTML = '<span class="icon">＋</span><span class="hint-text">터치해서 추가</span>';
+      el.appendChild(hint);
+    }
+
+    // 완수 오버레이
+    const ov = document.createElement('div');
+    ov.className = 'done-overlay' + (card.done ? ' show' : '');
+    ov.innerHTML = '<div class="done-circle">✓</div>';
+    el.appendChild(ov);
+
+    // 이벤트
+    if (isRunMode) {
+      el.onclick = () => toggleDone(i);
+    } else {
+      el.onclick = () => openEdit(i);
+    }
+
+    wrap.appendChild(el);
+    grid.appendChild(wrap);
+  });
+
+  // 화살표 + 보상
+  const arw = document.createElement('div');
+  arw.className = 'arrow-reward';
+  const rewardText = document.getElementById('rewardTextInput').value.trim();
+  arw.innerHTML = `
+    <div class="arrow">→</div>
+    <div class="reward-box" id="rewardBoxDisplay">
+      ${rewardImgDataUrl
+        ? `<img src="${rewardImgDataUrl}">`
+        : `<div class="reward-box-text">${rewardText || '🎁'}</div>`
+      }
+    </div>`;
+  grid.appendChild(arw);
+
+  if (isRunMode) updateProgress();
+}
+
+// ── 완수 토글 ──
+function toggleDone(i) {
+  cards[i].done = !cards[i].done;
+  render();
+  const filled = cards.slice(0, count).filter(c => c.done).length;
+  if (filled === count) {
+    setTimeout(showPraise, 300);
+  }
+}
+
+// ── 진행률 ──
+function updateProgress() {
+  const done = cards.slice(0, count).filter(c => c.done).length;
+  const pct = (done / count) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${done} / ${count}`;
+}
+
+// ── 편집 모달 ──
+function openEdit(i) {
+  editingIndex = i;
+  tempImgDataUrl = cards[i].imgDataUrl;
+  document.getElementById('cardTextInput').value = cards[i].text || '';
+  const prev = document.getElementById('photoPreview');
+  if (tempImgDataUrl) {
+    prev.src = tempImgDataUrl;
+    prev.style.display = 'block';
+    document.querySelector('#photoUploadArea .upload-icon').style.display = 'none';
+    document.querySelector('#photoUploadArea .upload-hint').style.display = 'none';
+  } else {
+    prev.style.display = 'none';
+    document.querySelector('#photoUploadArea .upload-icon').style.display = '';
+    document.querySelector('#photoUploadArea .upload-hint').style.display = '';
+  }
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('editModal')) closeEditModal();
+}
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  editingIndex = -1; tempImgDataUrl = null;
+}
+
+function saveCard() {
+  if (editingIndex < 0) return;
+  cards[editingIndex].text = document.getElementById('cardTextInput').value.trim();
+  cards[editingIndex].imgDataUrl = tempImgDataUrl;
+  closeEditModal();
+  render();
+}
+
+function deleteCard() {
+  if (editingIndex < 0) return;
+  cards[editingIndex] = { text: '', imgDataUrl: null, done: false };
+  closeEditModal();
+  render();
+}
+
+// ── 사진 업로드 (카드) ──
+function triggerCardPhoto() {
+  document.getElementById('cardFileInput').click();
+}
+document.getElementById('cardFileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    tempImgDataUrl = ev.target.result;
+    const prev = document.getElementById('photoPreview');
+    prev.src = tempImgDataUrl;
+    prev.style.display = 'block';
+    document.querySelector('#photoUploadArea .upload-icon').style.display = 'none';
+    document.querySelector('#photoUploadArea .upload-hint').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+  this.value = '';
+});
+
+// ── 사진 업로드 (보상) ──
+function triggerRewardPhoto() {
+  document.getElementById('rewardFileInput').click();
+}
+document.getElementById('rewardFileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    rewardImgDataUrl = ev.target.result;
+    document.getElementById('rewardPlus').style.display = 'none';
+    document.getElementById('rewardImg').src = rewardImgDataUrl;
+    document.getElementById('rewardImg').style.display = 'block';
+    render();
+  };
+  reader.readAsDataURL(file);
+  this.value = '';
+});
+
+// 보상 텍스트 변경 시 그리드 갱신
+document.getElementById('rewardTextInput').addEventListener('input', () => render());
+
+// ── 모드 전환 ──
+function startRun() {
+  isRunMode = true;
+  cards.slice(0, count).forEach(c => c.done = false);
+  document.getElementById('editToolbar').style.display = 'none';
+  document.getElementById('runToolbar').style.display = 'flex';
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('rewardSection').style.display = 'none';
+  document.getElementById('modeBadge').textContent = '▶ 실행 중';
+  document.getElementById('modeBadge').className = 'mode-badge run';
+  render();
+}
+
+function goEdit() {
+  isRunMode = false;
+  document.getElementById('editToolbar').style.display = 'flex';
+  document.getElementById('runToolbar').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('rewardSection').style.display = 'flex';
+  document.getElementById('modeBadge').textContent = '✏️ 편집 중';
+  document.getElementById('modeBadge').className = 'mode-badge edit';
+  render();
+}
+
+// ── 칭찬 팝업 ──
+function showPraise() {
+  const rewardText = document.getElementById('rewardTextInput').value.trim();
+  const pr = document.getElementById('praiseReward');
+  if (rewardImgDataUrl) {
+    pr.innerHTML = `<img src="${rewardImgDataUrl}">`;
+  } else if (rewardText) {
+    pr.innerHTML = rewardText;
+    pr.style.fontSize = '18px';
+  } else {
+    pr.innerHTML = '🎁';
+    pr.style.fontSize = '40px';
+  }
+  document.getElementById('praiseModal').style.display = 'flex';
+  spawnStars();
+}
+
+function closePraise() {
+  document.getElementById('praiseModal').style.display = 'none';
+  document.getElementById('starsContainer').innerHTML = '';
+  // 체크 초기화
+  cards.forEach(c => c.done = false);
+  render();
+}
+
+function spawnStars() {
+  const container = document.getElementById('starsContainer');
+  container.innerHTML = '';
+  const emojis = ['⭐','🌟','✨','🎉','🎊','💫'];
+  for (let i = 0; i < 30; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    s.style.left = Math.random()*100 + 'vw';
+    s.style.animationDuration = (1.5 + Math.random()*2) + 's';
+    s.style.animationDelay = (Math.random()*1.5) + 's';
+    s.style.fontSize = (14 + Math.random()*18) + 'px';
+    container.appendChild(s);
+  }
+}
+
+// ── 시작 ──
+init();
+</script>
+</body>
+</html>
